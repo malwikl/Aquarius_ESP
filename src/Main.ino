@@ -30,7 +30,12 @@ const long interval = 1000;
 const long Meassinterval = 10000;
 
 volatile bool wasConnected = false;
-uint8_t heart[8] = {0x0, 0xa, 0x1f, 0x1f, 0xe, 0x4, 0x0};
+byte icon_heart[] = {0x00,0xa,0x1f,0x1f,0xe,0x4,0x00};
+byte icon_house[] = {0x04,0x0E,0x1F,0x11,0x11,0x11,0x1F};
+byte icon_tree[] = {0x0E,0x1F,0x1F,0x0E,0x04,0x04,0x1F};
+byte icon_fish[] = {0x00,0x00,0x0D,0x13,0x13,0x0D,0x00};
+byte icon_cloud[] = {0x0C,0x12,0x1E,0x00,0x06,0x09,0x0F,0x00};
+
 char s_dec[5];
 
 LiquidCrystal_I2C lcd(0x3F, 20, 4);
@@ -221,9 +226,16 @@ void setup()
 {
   lcd.begin();
   lcd.backlight();
-  lcd.createChar(1, heart);
+  lcd.createChar(0, icon_heart);
+  lcd.createChar(1, icon_house);
+  lcd.createChar(2, icon_tree);
+  lcd.createChar(3, icon_fish);
+  lcd.createChar(4, icon_cloud);
+
   dht.begin();
   lcd.clear();
+
+
   lcd.setCursor(0, 0);
   lcd.print("Starting...");
   DBG_OUTPUT_PORT.begin(115200);
@@ -233,6 +245,11 @@ void setup()
   WiFi.mode(WIFI_STA);
   lcd.setCursor(0, 0);
   lcd.print("Connecting to ");
+  lcd.write(0);
+  lcd.write(1);
+  lcd.write(2);
+  lcd.write(3);
+  lcd.write(4);
   lcd.setCursor(0,1);
   lcd.print(WiFiSSID);
   WiFi.begin(WiFiSSID, WiFiPSK);
@@ -267,7 +284,8 @@ void loop()
     float t = dht.readTemperature();
     Serial.println(h);
     Serial.println(t);
-    lcd.print("Raum: ");
+    lcd.write(1);
+    lcd.print(" ");
     dtostrf(t, 4, 1, s_dec);
     lcd.print(s_dec);
     lcd.print((char)223);
@@ -295,19 +313,21 @@ void loop()
     Serial.println("ppm");
 
     lcd.setCursor(0, 3);
-
-    lcd.print("PPM: ");
+    lcd.write(4);
+    lcd.print(" ");
     lcd.print(ppm);
     lcd.print(" / ");
     lcd.print(correctedPPM);
 
     /* Aqua */
     lcd.setCursor(0,2);
-    lcd.print("Aqua: tbd");
+    lcd.write(3);
+    lcd.print(" ");
+    lcd.print("tbd");
   }
 
   /* Date & Time */
-  Serial.print(Wifi.status());
+  Serial.print(WiFi.status());
   if (WiFi.status() != WL_CONNECTED) {
     lcd.setCursor(0, 0);
     lcd.print("No Wifi!");
