@@ -179,28 +179,9 @@ void printTime(time_t t)
 
 void printTime_LCD(time_t t) {
   byte b_second, b_minute,b_hour, b_day, b_month;
-  b_second = second(t);
-  b_minute = minute (t);
-  b_hour =hour(t);
-  b_day = day(t);
-  b_month= month(t);
-
-  if (b_day < 10) { lcd.print("0"); }
-  lcd.print(b_day);
-  lcd.print(".");
-  if (b_month < 10) { lcd.print("0"); }
-  lcd.print(b_month);
-  lcd.print(".");
-  lcd.print(year(t));
-  lcd.print("  ");
-  if (b_hour < 10) { lcd.print("0"); }
-  lcd.print(b_hour);
-  lcd.print(":");
-  if (b_minute < 10) { lcd.print("0"); }
-  lcd.print(b_minute);
-  lcd.print(":");
-  if (b_second < 10) { lcd.print("0"); }
-  lcd.print(b_second);
+  char timeString[21];
+  sprintf(timeString, "%02d.%02d.%4d  %02d:%02d:%02d", day(t), month(t),year(t),hour(t),minute(t),second(t));
+  lcd.print(timeString);
 }
 
 //Print an integer in "00" format (with leading zero).
@@ -239,7 +220,7 @@ void setup()
   lcd.setCursor(0, 0);
   lcd.print("Starting...");
   DBG_OUTPUT_PORT.begin(115200);
-  DBG_OUTPUT_PORT.setDebugOutput(true);
+  DBG_OUTPUT_PORT.setDebugOutput(false);
   DBG_OUTPUT_PORT.println(F("ArduinoClub-NTP-Timezone"));
 
   WiFi.mode(WIFI_STA);
@@ -263,6 +244,7 @@ void setup()
     DBG_OUTPUT_PORT.print(F("Local port: "));
     DBG_OUTPUT_PORT.println(Udp.localPort());
     DBG_OUTPUT_PORT.println(F("waiting for sync"));
+
   }
 
 
@@ -280,19 +262,20 @@ void loop()
     previousMeassMillis = currentMeassMillis;
 
     lcd.setCursor(0, 1);
+
     float h = dht.readHumidity();
     float t = dht.readTemperature();
-    Serial.println(h);
-    Serial.println(t);
+    char _h[7], _t[7];
+    char dhtString[21];
+
+    dtostrf(h, 4, 1, _h);
+    dtostrf(t, 4, 1, _t);
+    sprintf(dhtString, "%s%cC %s%%", _t,(char)223, _h);
+
     lcd.write(1);
     lcd.print(" ");
-    dtostrf(t, 4, 1, s_dec);
-    lcd.print(s_dec);
-    lcd.print((char)223);
-    lcd.print("C / ");
-    dtostrf(h, 4, 1, s_dec);
-    lcd.print(s_dec);
-    lcd.print("%");
+    lcd.print(dhtString);
+    Serial.println(dhtString);
 
     /* MQ135 */
     float rzero = mq135_sensor.getRZero();
@@ -327,7 +310,7 @@ void loop()
   }
 
   /* Date & Time */
-  Serial.print(WiFi.status());
+  //Serial.print(WiFi.status());
   if (WiFi.status() != WL_CONNECTED) {
     lcd.setCursor(0, 0);
     lcd.print("No Wifi!");
