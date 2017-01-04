@@ -42,7 +42,7 @@ bool isConnected(long timeOutSec) {
   int z = 0;
   while (WiFi.status() != WL_CONNECTED) {
     delay(200);
-    DBG_OUTPUT_PORT.print(".");
+    //DBG_OUTPUT_PORT.print(".");
     if (z == timeOutSec / 200) { return false; }
     z++;
   }
@@ -219,15 +219,28 @@ void sPrintDigits(int val)
 
 void setup()
 {
+  lcd.begin();
+  lcd.backlight();
+  lcd.createChar(1, heart);
+  dht.begin();
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Starting...");
   DBG_OUTPUT_PORT.begin(115200);
   DBG_OUTPUT_PORT.setDebugOutput(true);
   DBG_OUTPUT_PORT.println(F("ArduinoClub-NTP-Timezone"));
 
   WiFi.mode(WIFI_STA);
+  lcd.setCursor(0, 0);
+  lcd.print("Connecting to ");
+  lcd.setCursor(0,1);
+  lcd.print(WiFiSSID);
   WiFi.begin(WiFiSSID, WiFiPSK);
 
   if (isConnected(30)) {
     wasConnected = true;
+    lcd.setCursor(0, 0);
+    lcd.print("Connected!");
     DBG_OUTPUT_PORT.println(F("Starting UDP"));
     Udp.begin(localPort);
     DBG_OUTPUT_PORT.print(F("Local port: "));
@@ -237,10 +250,7 @@ void setup()
 
 
   /* add setup code here */
-  lcd.begin();
-  lcd.backlight();
-  lcd.createChar(1, heart);
-  dht.begin();
+
   lcd.clear();
 }
 
@@ -295,16 +305,23 @@ void loop()
     lcd.setCursor(0,2);
     lcd.print("Aqua: tbd");
   }
+
   /* Date & Time */
-  lcd.setCursor(0, 0);
-  unsigned long currentMillis = millis();
-  if (currentMillis - previousMillis >= interval) {
-    previousMillis = currentMillis;
-    if (!isConnected(10) && wasConnected) { delay(200); ESP.restart(); }
-    if (!getNtpTime(ntpServerName1)) { getNtpTime(ntpServerName2); }
-    local = CE.toLocal(now(), &tcr);
-    printTime(local);
-    printTime_LCD(local);
+  Serial.print(Wifi.status());
+  if (WiFi.status() != WL_CONNECTED) {
+    lcd.setCursor(0, 0);
+    lcd.print("No Wifi!");
+  } else {
+    lcd.setCursor(0, 0);
+    unsigned long currentMillis = millis();
+    if (currentMillis - previousMillis >= interval) {
+      previousMillis = currentMillis;
+      if (!isConnected(10) && wasConnected) { delay(200); ESP.restart(); }
+      if (!getNtpTime(ntpServerName1)) { getNtpTime(ntpServerName2); }
+      local = CE.toLocal(now(), &tcr);
+      printTime(local);
+      printTime_LCD(local);
+  }
   }
 
   //delay(000);

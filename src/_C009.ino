@@ -3,7 +3,7 @@
 //#######################################################################################################
 //Test
 
-boolean FHEMCreateBuffer() {
+boolean FHEMSetReading() {
 
         // We now create a URI for the request
         String url = F("/fhem?cmd=");
@@ -63,7 +63,7 @@ boolean FHEMCreateBuffer() {
         char buffer[root.measureLength() +1];
         root.printTo(buffer, sizeof(buffer));
         // Push bu to server
-        FHEMHTTPsend(url, buffer);
+        HTTPSend(url, buffer);
       }
 
 
@@ -71,7 +71,7 @@ boolean FHEMCreateBuffer() {
 //********************************************************************************
 // FHEM HTTP request
 //********************************************************************************
-boolean FHEMHTTPsend(String url, char* buffer)
+boolean HTTPSend(String url, char* buffer)
 {
   boolean success = false;
 /*
