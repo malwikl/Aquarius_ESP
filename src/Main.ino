@@ -30,10 +30,10 @@ const long interval = 1000;
 const long Meassinterval = 10000;
 
 volatile bool wasConnected = false;
-byte icon_heart[] = {0x00,0xa,0x1f,0x1f,0xe,0x4,0x00};
-byte icon_house[] = {0x04,0x0E,0x1F,0x11,0x11,0x11,0x1F};
-byte icon_tree[] = {0x0E,0x1F,0x1F,0x0E,0x04,0x04,0x1F};
-byte icon_fish[] = {0x00,0x00,0x0D,0x13,0x13,0x0D,0x00};
+byte icon_heart[] = {0x00,0xa,0x1f,0x1f,0xe,0x4,0x00,0x00};
+byte icon_house[] = {0x04,0x0E,0x1F,0x11,0x11,0x11,0x1F,0x00};
+byte icon_tree[] = {0x0E,0x1F,0x1F,0x0E,0x04,0x04,0x1F,0x00};
+byte icon_fish[] = {0x00,0x00,0x0D,0x13,0x13,0x0D,0x00,0x00};
 byte icon_cloud[] = {0x0C,0x12,0x1E,0x00,0x06,0x09,0x0F,0x00};
 
 char s_dec[5];
@@ -181,6 +181,7 @@ void printTime_LCD(time_t t) {
   byte b_second, b_minute,b_hour, b_day, b_month;
   char timeString[21];
   sprintf(timeString, "%02d.%02d.%4d  %02d:%02d:%02d", day(t), month(t),year(t),hour(t),minute(t),second(t));
+  sprintf(timeString, "%-*s", 20, timeString);
   lcd.print(timeString);
 }
 
@@ -202,6 +203,67 @@ void sPrintDigits(int val)
   DBG_OUTPUT_PORT.print(val, DEC);
 }
 //############################################################################################
+boolean FHEMSetReading(char* deviceName, char* readingName, char* readingValue) {
+
+        // We now create a URI for the request
+        String url = F("/fhem?cmd=setReading%20");
+        url += deviceName;
+        url += F("%20");
+        url += readingName;
+        url += F("%20");
+        url += readingValue;
+
+        boolean success = false;
+      /*
+        String authHeader = "";
+        if ((SecuritySettings.ControllerUser[0] != 0) && (SecuritySettings.ControllerPassword[0] != 0)) {
+          base64 encoder;
+          String auth = SecuritySettings.ControllerUser;
+          auth += ":";
+          auth += SecuritySettings.ControllerPassword;
+          authHeader = "Authorization: Basic " + encoder.encode(auth) + " \r\n";
+        }
+      */
+
+
+        char host[20] = "192.168.178.24";
+
+        // Use WiFiClient class to create TCP connections
+        WiFiClient client;
+        if (!client.connect(host, 8083)) {
+          Serial.println("HTTP : connection failed");
+          return false;
+        }
+
+        // This will send the request to the server
+        client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+                    "Content-Length: 0\r\n" +
+                    "Host: " + host + "\r\n" + //authHeader +
+                    "Connection: close\r\n\r\n");
+
+        unsigned long timer = millis() + 200;
+        while (!client.available() && millis() < timer)
+          delay(1);
+
+        // Read all the lines of the reply from server and print them to Serial
+        while (client.available()) {
+          String line = client.readStringUntil('\n');
+          if (line.substring(0, 15) == "HTTP/1.1 200 OK") {
+            Serial.println("HTTP : Success");
+            success = true;
+          }
+          else if (line.substring(0, 24) == "HTTP/1.1 400 Bad Request") {
+            Serial.println("HTTP : Unauthorized");
+          }
+          else if (line.substring(0, 25) == "HTTP/1.1 401 Unauthorized") {
+            Serial.println("HTTP : Unauthorized");
+          }
+          delay(1);
+        }
+        Serial.println("HTTP : closing connection");
+        client.flush();
+        client.stop();
+      }
 
 void setup()
 {
@@ -260,22 +322,20 @@ void loop()
   unsigned long currentMeassMillis = millis();
   if (currentMeassMillis - previousMeassMillis >= Meassinterval) {
     previousMeassMillis = currentMeassMillis;
-
+    //lcd.clear();
     lcd.setCursor(0, 1);
 
     float h = dht.readHumidity();
     float t = dht.readTemperature();
     char _h[7], _t[7];
-    char dhtString[21];
+    char bufferString[21];
 
     dtostrf(h, 4, 1, _h);
     dtostrf(t, 4, 1, _t);
-    sprintf(dhtString, "%s%cC %s%%", _t,(char)223, _h);
-
-    lcd.write(1);
-    lcd.print(" ");
-    lcd.print(dhtString);
-    Serial.println(dhtString);
+    sprintf(bufferString, "%c %s%cC %s%%", (char)1, _t,(char)223, _h);
+    sprintf(bufferString, "%-*s", 20, bufferString);
+    lcd.print(bufferString);
+    Serial.println(bufferString);
 
     /* MQ135 */
     float rzero = mq135_sensor.getRZero();
@@ -296,11 +356,9 @@ void loop()
     Serial.println("ppm");
 
     lcd.setCursor(0, 3);
-    lcd.write(4);
-    lcd.print(" ");
-    lcd.print(ppm);
-    lcd.print(" / ");
-    lcd.print(correctedPPM);
+    sprintf(bufferString, "%c %i", (char)4, (int)correctedPPM);
+    sprintf(bufferString, "%-*s", 20, bufferString);
+    lcd.print(bufferString);
 
     /* Aqua */
     lcd.setCursor(0,2);
