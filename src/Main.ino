@@ -16,6 +16,8 @@ This example code is in the public domain.
 #include <LiquidCrystal_I2C.h>
 #include <ArduinoJson.h>
 #include <base64.h>
+#include <RunningAverage.h>
+#include "FHEM.h"
 
 const char WiFiSSID[] = "GLUBBER";     //### your Router SSID
 const char WiFiPSK[]  = "ficusbenjamini"; //### your Router Password
@@ -28,8 +30,10 @@ unsigned long previousMillis = 0;
 unsigned long previousMeassMillis = 0;
 unsigned long previousSendMillis = 0;
 const long interval = 1000;       // Update Clock each second
-const long Meassinterval = 10000; //Measure each 10 seconds
+const long Meassinterval = 30000; //Measure each 10 seconds
 const long sendInterval = 300000; //Send only each 300 seconds to FHEM
+RunningAverage myRA(10);
+FHEM myFHEM;
 
 volatile bool wasConnected = false;
 byte icon_heart[] = {0x00,0xa,0x1f,0x1f,0xe,0x4,0x00,0x00};
@@ -205,67 +209,7 @@ void sPrintDigits(int val)
   DBG_OUTPUT_PORT.print(val, DEC);
 }
 //############################################################################################
-boolean FHEMSetReading(String deviceName, String readingName, String readingValue) {
 
-  // We now create a URI for the request
-  String url = F("/fhem?cmd=setReading%20");
-  url += deviceName;
-  url += F("%20");
-  url += readingName;
-  url += F("%20");
-  url += readingValue;
-  
-  boolean success = false;
-  /*
-  String authHeader = "";
-  if ((SecuritySettings.ControllerUser[0] != 0) && (SecuritySettings.ControllerPassword[0] != 0)) {
-  base64 encoder;
-  String auth = SecuritySettings.ControllerUser;
-  auth += ":";
-  auth += SecuritySettings.ControllerPassword;
-  authHeader = "Authorization: Basic " + encoder.encode(auth) + " \r\n";
-}
-*/
-
-
-char host[20] = "192.168.178.34";
-
-// Use WiFiClient class to create TCP connections
-WiFiClient client;
-if (!client.connect(host, 8083)) {
-  Serial.println("HTTP : connection failed");
-  return false;
-}
-
-// This will send the request to the server
-client.print(String("GET ") + url + " HTTP/1.1\r\n" +
-"Content-Length: 0\r\n" +
-"Host: " + host + "\r\n" + //authHeader +
-"Connection: close\r\n\r\n");
-
-unsigned long timer = millis() + 200;
-while (!client.available() && millis() < timer)
-delay(1);
-
-// Read all the lines of the reply from server and print them to Serial
-while (client.available()) {
-  String line = client.readStringUntil('\n');
-  if (line.substring(0, 15) == "HTTP/1.1 200 OK") {
-    Serial.println("HTTP : Success");
-    success = true;
-  }
-  else if (line.substring(0, 24) == "HTTP/1.1 400 Bad Request") {
-    Serial.println("HTTP : Unauthorized");
-  }
-  else if (line.substring(0, 25) == "HTTP/1.1 401 Unauthorized") {
-    Serial.println("HTTP : Unauthorized");
-  }
-  delay(1);
-}
-Serial.println("HTTP : closing connection");
-client.flush();
-client.stop();
-}
 
 void setup()
 {
@@ -329,8 +273,8 @@ void loop()
 
     float h = dht.readHumidity();
     float t = dht.readTemperature();
-    char _h[7], _t[7], _ppm[7], _rawppm[7], _rzero[7];
     char bufferString[21];
+    char _h[7], _t[7], _co2[7];
 
     dtostrf(h, 4, 1, _h);
     dtostrf(t, 4, 1, _t);
@@ -357,21 +301,22 @@ void loop()
     Serial.print(correctedPPM);
     Serial.println("ppm");
 
+    myRA.addValue(correctedPPM);
+
 
     if (currentMillis - previousSendMillis >= sendInterval) {
       previousSendMillis = currentMillis;
-      FHEMSetReading("TESTMK", "humidity", _h);
-      FHEMSetReading("TESTMK", "temperature", _t);
-      dtostrf(correctedPPM, 1, 0, _ppm);
-      FHEMSetReading("TESTMK", "ppm", _ppm);
-      dtostrf(ppm, 1, 0, _rawppm);
-      FHEMSetReading("TESTMK", "rawppm", _rawppm);
-      dtostrf(rzero, 1, 0, _rzero);
-      FHEMSetReading("TESTMK", "rzeroppm", _rzero);
+      myFHEM.setReading("TESTMK", "humidity", h, 1);
+      myFHEM.setReading("TESTMK", "temperature", t, 1);
+      myFHEM.setReading("TESTMK", "ppm", correctedPPM, 0);
+      myFHEM.setReading("TESTMK", "rawppm", ppm, 0);
+      myFHEM.setReading("TESTMK", "rzeroppm", rzero, 0);
+      myFHEM.setReading("TESTMK", "co2", correctedPPM, 0);
     }
 
     lcd.setCursor(0, 3);
-    sprintf(bufferString, "%c %i", (char)4, (int)correctedPPM);
+    dtostrf(myRA.getAverage(), 1, 0, _co2);
+    sprintf(bufferString, "%c %i Avg: %s", (char)4, (int)correctedPPM, _co2);
     sprintf(bufferString, "%-*s", 20, bufferString);
     lcd.print(bufferString);
 
