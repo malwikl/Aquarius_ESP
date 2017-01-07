@@ -5,7 +5,6 @@ This example code is in the public domain.
 */
 
 #include <ESP8266WiFi.h>
-#include <WiFiClient.h>
 #include <WiFiUdp.h>
 #include <TimeLib.h>  //by Paul Stoffregen, not included in the Arduino IDE !!!
 #include <Timezone.h> //by Jack Christensen, not included in the Arduino IDE !!!
@@ -14,8 +13,6 @@ This example code is in the public domain.
 #include <DHT.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
-#include <ArduinoJson.h>
-#include <base64.h>
 #include <RunningAverage.h>
 #include "FHEM.h"
 
