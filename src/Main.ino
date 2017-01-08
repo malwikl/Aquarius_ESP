@@ -27,7 +27,7 @@ unsigned long previousMillis = 0;
 unsigned long previousMeassMillis = 0;
 unsigned long previousSendMillis = 0;
 const long interval = 1000;       // Update Clock each second
-const long Meassinterval = 30000; //Measure each 10 seconds
+const long Meassinterval = 10000; //Measure each 10 seconds
 const long sendInterval = 300000; //Send only each 300 seconds to FHEM
 RunningAverage myRA(10);
 FHEM myFHEM;
