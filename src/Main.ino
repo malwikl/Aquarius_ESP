@@ -27,7 +27,7 @@ unsigned long previousMillis = 0;
 unsigned long previousMeassMillis = 0;
 unsigned long previousSendMillis = 0;
 const long interval = 1000;       // Update Clock each second
-const long Meassinterval = 10000; //Measure each 10 seconds
+const long meassInterval = 10000; //Measure each 10 seconds
 const long sendInterval = 300000; //Send only each 300 seconds to FHEM
 RunningAverage myRA(10);
 FHEM myFHEM;
@@ -263,7 +263,7 @@ void loop()
   /* Temp & Hum vom DHT22 */
 
   unsigned long currentMillis = millis();
-  if (currentMillis - previousMeassMillis >= Meassinterval) {
+  if (currentMillis - previousMeassMillis >= meassInterval) {
     previousMeassMillis = currentMillis;
     //lcd.clear();
     lcd.setCursor(0, 1);
@@ -307,7 +307,8 @@ void loop()
       myFHEM.setReading("TESTMK", "temperature", t, 1);
       myFHEM.setReading("TESTMK", "ppm", correctedPPM, 0);
       myFHEM.setReading("TESTMK", "rawppm", ppm, 0);
-      myFHEM.setReading("TESTMK", "rzeroppm", rzero, 0);
+      myFHEM.setReading("TESTMK", "rawrzero", rzero, 0);
+      myFHEM.setReading("TESTMK", "rzero", correctedRZero, 0);
       myFHEM.setReading("TESTMK", "co2", correctedPPM, 0);
     }
 
