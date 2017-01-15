@@ -29,6 +29,9 @@ unsigned long previousSendMillis = 0;
 const long interval = 1000;       // Update Clock each second
 const long meassInterval = 10000; //Measure each 10 seconds
 const long sendInterval = 300000; //Send only each 300 seconds to FHEM
+float lastTemp = 0.0;
+float lastHum = 0.0;
+
 RunningAverage myRA(10);
 FHEM myFHEM;
 
@@ -272,6 +275,15 @@ void loop()
     float t = dht.readTemperature();
     char bufferString[21];
     char _h[7], _t[7], _co2[7];
+
+    //Check if reading DHT worked, otherwise use last correct measured values
+    if (isnan(h) || isnan(t)) {
+      h = lastHum;
+      t = lastTemp;
+    } else {
+      lastHum = h;
+      lastTemp = t;
+    }
 
     dtostrf(h, 4, 1, _h);
     dtostrf(t, 4, 1, _t);
