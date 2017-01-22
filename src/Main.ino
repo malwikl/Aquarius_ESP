@@ -15,9 +15,10 @@ This example code is in the public domain.
 #include <LiquidCrystal_I2C.h>
 #include <RunningAverage.h>
 #include "FHEM.h"
+#include <DNSServer.h>
+#include <ESP8266WebServer.h>
+#include "WiFiManager.h"          //https://github.com/tzapu/WiFiManager
 
-const char WiFiSSID[] = "GLUBBER";     //### your Router SSID
-const char WiFiPSK[]  = "ficusbenjamini"; //### your Router Password
 
 #define DBG_OUTPUT_PORT Serial
 #define DHTTYPE DHT22
@@ -47,6 +48,23 @@ char s_dec[5];
 LiquidCrystal_I2C lcd(0x3F, 20, 4);
 DHT dht(DHTPIN, DHTTYPE);
 MQ135 mq135_sensor = MQ135(0);
+
+void configModeCallback (WiFiManager *myWiFiManager) {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  Serial.println("Entered config mode");
+  lcd.print("Entered config mode");
+  lcd.setCursor(0, 1);
+  Serial.println(WiFi.softAPIP());
+  lcd.print("my IP: ");
+  lcd.print(WiFi.softAPIP());
+  //if you used auto generated SSID, print it
+  lcd.setCursor(0, 2);
+  Serial.println(myWiFiManager->getConfigPortalSSID());
+  lcd.print("AP: ");
+  lcd.print(myWiFiManager->getConfigPortalSSID());
+}
+
 
 bool isConnected(long timeOutSec) {
   timeOutSec = timeOutSec * 1000;
@@ -224,6 +242,23 @@ void setup()
   dht.begin();
   lcd.clear();
 
+  WiFiManager wifiManager;
+  //reset settings - for testing
+  //wifiManager.resetSettings();
+
+  //set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
+  wifiManager.setAPCallback(configModeCallback);
+
+  //fetches ssid and pass and tries to connect
+  //if it does not connect it starts an access point with the specified name
+  //here  "AutoConnectAP"
+  //and goes into a blocking loop awaiting configuration
+  if(!wifiManager.autoConnect()) {
+    Serial.println("failed to connect and hit timeout");
+    //reset and try again, or maybe put it to deep sleep
+    ESP.reset();
+    delay(1000);
+  }
 
   lcd.setCursor(0, 0);
   lcd.print("Starting...");
@@ -231,17 +266,6 @@ void setup()
   DBG_OUTPUT_PORT.setDebugOutput(false);
   DBG_OUTPUT_PORT.println(F("ArduinoClub-NTP-Timezone"));
 
-  WiFi.mode(WIFI_STA);
-  lcd.setCursor(0, 0);
-  lcd.print("Connecting to ");
-  lcd.write(0);
-  lcd.write(1);
-  lcd.write(2);
-  lcd.write(3);
-  lcd.write(4);
-  lcd.setCursor(0,1);
-  lcd.print(WiFiSSID);
-  WiFi.begin(WiFiSSID, WiFiPSK);
 
   if (isConnected(30)) {
     wasConnected = true;
